@@ -9,6 +9,7 @@ import { Form, FormField, FormInput } from "@/components/ui/form";
 import { Text } from "@/components/ui/text";
 import { H1 } from "@/components/ui/typography";
 import { useSupabase } from "@/context/supabase-provider";
+import { StyleSheet } from "react-native";
 
 const formSchema = z.object({
 	email: z.string().email("Please enter a valid email address."),
@@ -40,20 +41,24 @@ export default function SignIn() {
 	}
 
 	return (
-		<SafeAreaView className="flex-1 bg-gray-950 p-4" edges={["bottom"]}>
-			<View className="flex-1 gap-4 web:m-4">
-				<H1 className="self-start text-white ">Connectez-vous</H1>
+		<SafeAreaView style={styles.container}>
+			<View style={styles.content}>
+				<View style={styles.headerContainer}>
+					<H1 style={styles.title}>Bienvenue</H1>
+					<Text style={styles.subtitle}>Connectez-vous pour continuer</Text>
+				</View>
+
 				<Form {...form}>
-					<form className="flex-1 gap-4">
-						<View className="gap-4">
-							<Text className="text-white -mb-8">Email</Text>
+					<View style={styles.formContainer}>
+						<View style={styles.inputGroup}>
+							<Text style={styles.label}>Email</Text>
 							<FormField
 								control={form.control}
 								name="email"
 								render={({ field }) => (
 									<FormInput
-										label="Email"
-										placeholder="Email"
+										style={styles.input}
+										placeholder="votremail@exemple.com"
 										autoCapitalize="none"
 										autoComplete="email"
 										autoCorrect={false}
@@ -62,14 +67,15 @@ export default function SignIn() {
 									/>
 								)}
 							/>
-							<Text className="text-white -mb-8">Mot de passe</Text>
-              <FormField
+
+							<Text style={styles.label}>Mot de passe</Text>
+							<FormField
 								control={form.control}
 								name="password"
 								render={({ field }) => (
 									<FormInput
-										label="Password"
-										placeholder="Password"
+										style={styles.input}
+										placeholder="••••••••"
 										autoCapitalize="none"
 										autoCorrect={false}
 										secureTextEntry
@@ -78,22 +84,98 @@ export default function SignIn() {
 								)}
 							/>
 						</View>
-					</form>
+					</View>
 				</Form>
 			</View>
+
 			<Button
-				size="lg"
-				variant="default"
 				onPress={form.handleSubmit(onSubmit)}
 				disabled={form.formState.isSubmitting}
-				className="web:m-4 bg-white"
+				style={styles.button}
 			>
 				{form.formState.isSubmitting ? (
-					<ActivityIndicator size="small" />
+					<ActivityIndicator color="#FFFFFF" />
 				) : (
-					<Text key="sign-in-text" className="text-black">VALIDER</Text>
+					<Text style={styles.buttonText}>SE CONNECTER</Text>
 				)}
 			</Button>
 		</SafeAreaView>
 	);
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		backgroundColor: '#FFFFFF',
+	},
+	content: {
+		flex: 1,
+		padding: 24,
+	},
+	headerContainer: {
+		marginBottom: 32,
+		alignItems: 'center',
+	},
+	title: {
+		fontSize: 32,
+		fontWeight: '700',
+		color: '#111827',
+		marginBottom: 8,
+	},
+	subtitle: {
+		fontSize: 16,
+		color: '#6B7280',
+	},
+	formContainer: {
+		backgroundColor: '#F9FAFB',
+		borderRadius: 16,
+		padding: 24,
+		shadowColor: '#000',
+		shadowOffset: {
+			width: 0,
+			height: 2,
+		},
+		shadowOpacity: 0.05,
+		shadowRadius: 4,
+		elevation: 3,
+	},
+	inputGroup: {
+		gap: 16,
+	},
+	label: {
+		fontSize: 14,
+		fontWeight: '500',
+		color: '#374151',
+		marginBottom: 4,
+	},
+	input: {
+		backgroundColor: '#FFFFFF',
+		borderWidth: 1,
+		borderColor: '#E5E7EB',
+		borderRadius: 12,
+		padding: 16,
+		fontSize: 16,
+		color: '#111827',
+	},
+	button: {
+		margin: 24,
+		backgroundColor: '#2563EB',
+		borderRadius: 12,
+		padding: 16,
+		alignItems: 'center',
+		justifyContent: 'center',
+		shadowColor: '#2563EB',
+		shadowOffset: {
+			width: 0,
+			height: 4,
+		},
+		shadowOpacity: 0.2,
+		shadowRadius: 8,
+		elevation: 4,
+	},
+	buttonText: {
+		color: '#FFFFFF',
+		fontSize: 16,
+		fontWeight: '600',
+	},
+});

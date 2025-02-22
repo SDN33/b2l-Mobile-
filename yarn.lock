@@ -6863,6 +6863,13 @@ react-native-screens@^4.0.0:
     react-freeze "^1.0.0"
     warn-once "^0.1.0"
 
+react-native-tab-view@^4.0.5:
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/react-native-tab-view/-/react-native-tab-view-4.0.5.tgz#d12ec7dfd260c6acb247a401b3fc4abe6a3d466c"
+  integrity sha512-Xn3TpYo4yvKRC/f4+cOcvsXlitdnSaYkacshckrEI3JiDmFKNFIRVNxtZFggm4MwbJafq2RzuzR6xrgKoxgkTw==
+  dependencies:
+    use-latest-callback "^0.2.1"
+
 react-native-url-polyfill@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/react-native-url-polyfill/-/react-native-url-polyfill-2.0.0.tgz#db714520a2985cff1d50ab2e66279b9f91ffd589"

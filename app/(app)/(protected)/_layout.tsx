@@ -22,21 +22,23 @@ export default function ProtectedLayout() {
                     colorScheme === "dark"
                         ? colors.dark.foreground
                         : colors.light.foreground,
-                tabBarShowLabel: false,
                 tabBarIcon: ({ color, size }) => {
-                    let iconName: "home" | "settings" = "home";
+                    let iconName: keyof typeof Ionicons.glyphMap = "home";
 
                     if (route.name === "index") {
-                        iconName = "home";
+                        iconName = "document-text-outline";
+                    } else if (route.name === "planning") {
+                        iconName = "calendar-outline";
                     } else if (route.name === "settings") {
-                        iconName = "settings";
+                        iconName = "settings-outline";
                     }
 
                     return <Ionicons name={iconName} size={size} color={color} />;
                 },
             })}
         >
-            <Tabs.Screen name="index" options={{ title: "Accueil" }} />
+            <Tabs.Screen name="index" options={{ title: "Notes" }} />
+            <Tabs.Screen name="planning" options={{ title: "Planning" }} />
             <Tabs.Screen name="settings" options={{ title: "Réglages" }} />
         </Tabs>
     );
