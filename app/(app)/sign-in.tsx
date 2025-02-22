@@ -14,7 +14,7 @@ const formSchema = z.object({
 	email: z.string().email("Please enter a valid email address."),
 	password: z
 		.string()
-		.min(8, "Please enter at least 8 characters.")
+		.min(4, "Please enter at least 4 characters.")
 		.max(64, "Please enter fewer than 64 characters."),
 });
 
@@ -40,54 +40,58 @@ export default function SignIn() {
 	}
 
 	return (
-		<SafeAreaView className="flex-1 bg-background p-4" edges={["bottom"]}>
+		<SafeAreaView className="flex-1 bg-gray-950 p-4" edges={["bottom"]}>
 			<View className="flex-1 gap-4 web:m-4">
-				<H1 className="self-start ">Sign In</H1>
+				<H1 className="self-start text-white ">Connectez-vous</H1>
 				<Form {...form}>
-					<View className="gap-4">
-						<FormField
-							control={form.control}
-							name="email"
-							render={({ field }) => (
-								<FormInput
-									label="Email"
-									placeholder="Email"
-									autoCapitalize="none"
-									autoComplete="email"
-									autoCorrect={false}
-									keyboardType="email-address"
-									{...field}
-								/>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="password"
-							render={({ field }) => (
-								<FormInput
-									label="Password"
-									placeholder="Password"
-									autoCapitalize="none"
-									autoCorrect={false}
-									secureTextEntry
-									{...field}
-								/>
-							)}
-						/>
-					</View>
+					<form className="flex-1 gap-4">
+						<View className="gap-4">
+							<Text className="text-white -mb-8">Email</Text>
+							<FormField
+								control={form.control}
+								name="email"
+								render={({ field }) => (
+									<FormInput
+										label="Email"
+										placeholder="Email"
+										autoCapitalize="none"
+										autoComplete="email"
+										autoCorrect={false}
+										keyboardType="email-address"
+										{...field}
+									/>
+								)}
+							/>
+							<Text className="text-white -mb-8">Mot de passe</Text>
+              <FormField
+								control={form.control}
+								name="password"
+								render={({ field }) => (
+									<FormInput
+										label="Password"
+										placeholder="Password"
+										autoCapitalize="none"
+										autoCorrect={false}
+										secureTextEntry
+										{...field}
+									/>
+								)}
+							/>
+						</View>
+					</form>
 				</Form>
 			</View>
 			<Button
-				size="default"
+				size="lg"
 				variant="default"
 				onPress={form.handleSubmit(onSubmit)}
 				disabled={form.formState.isSubmitting}
-				className="web:m-4"
+				className="web:m-4 bg-white"
 			>
 				{form.formState.isSubmitting ? (
 					<ActivityIndicator size="small" />
 				) : (
-					<Text>Sign In</Text>
+					<Text key="sign-in-text" className="text-black">VALIDER</Text>
 				)}
 			</Button>
 		</SafeAreaView>

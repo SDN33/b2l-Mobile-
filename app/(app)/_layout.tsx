@@ -4,7 +4,7 @@ import { colors } from "@/constants/colors";
 import { useColorScheme } from "@/lib/useColorScheme";
 
 export const unstable_settings = {
-	initialRouteName: "(root)",
+	initialRouteName: "sign-in",
 };
 
 export default function AppLayout() {
@@ -38,7 +38,7 @@ export default function AppLayout() {
 				options={{
 					presentation: "modal",
 					headerShown: true,
-					headerTitle: "Sign In",
+					headerTitle: "Retour",
 					headerStyle: {
 						backgroundColor:
 							colorScheme === "dark"
