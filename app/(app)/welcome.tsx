@@ -20,7 +20,7 @@ export default function WelcomeScreen() {
 				/>
 				<H1 className="text-center text-red-600">The Place To Be  STAFF</H1>
 				<Muted className="text-center text-white">
-					Un portail fait améliorer la communication entre les employés et les
+					Un portail fait pour améliorer la communication entre les employés et
           employeurs
 				</Muted>
 			</View>
