@@ -37,11 +37,23 @@ interface Task {
   };
 }
 
+interface CashDetail {
+  denomination: number;
+  quantity: number;
+  total: number;
+}
+
 interface CashReportForm {
   totalCash: number;
   cardPayments: number;
   tickets: number;
   notes: string;
+  cashDetails: {
+    bills: CashDetail[];
+    coins: CashDetail[];
+  };
+  signature: string | null;
+  hasConfirmedHonesty: boolean;
 }
 
 export default function Planning() {
@@ -56,6 +68,29 @@ export default function Planning() {
     cardPayments: 0,
     tickets: 0,
     notes: '',
+    cashDetails: {
+      bills: [
+        { denomination: 500, quantity: 0, total: 0 },
+        { denomination: 200, quantity: 0, total: 0 },
+        { denomination: 100, quantity: 0, total: 0 },
+        { denomination: 50, quantity: 0, total: 0 },
+        { denomination: 20, quantity: 0, total: 0 },
+        { denomination: 10, quantity: 0, total: 0 },
+        { denomination: 5, quantity: 0, total: 0 }
+      ],
+      coins: [
+        { denomination: 2, quantity: 0, total: 0 },
+        { denomination: 1, quantity: 0, total: 0 },
+        { denomination: 0.5, quantity: 0, total: 0 },
+        { denomination: 0.2, quantity: 0, total: 0 },
+        { denomination: 0.1, quantity: 0, total: 0 },
+        { denomination: 0.05, quantity: 0, total: 0 },
+        { denomination: 0.02, quantity: 0, total: 0 },
+        { denomination: 0.01, quantity: 0, total: 0 }
+      ]
+    },
+    signature: null,
+    hasConfirmedHonesty: false
   });
 
   const fetchUserAndTasks = useCallback(async () => {
@@ -134,6 +169,10 @@ export default function Planning() {
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
 
+      // Calcul des totaux par catégorie
+      const billsTotal = reportForm.cashDetails.bills.reduce((sum, bill) => sum + bill.total, 0);
+      const coinsTotal = reportForm.cashDetails.coins.reduce((sum, coin) => sum + coin.total, 0);
+
       // Créer le rapport de caisse
       const { error: cashError } = await supabase
         .from('cash_reports')
@@ -145,7 +184,26 @@ export default function Planning() {
             totalCash: reportForm.totalCash,
             cardPayments: reportForm.cardPayments,
             tickets: reportForm.tickets,
-            notes: reportForm.notes
+            notes: reportForm.notes,
+            details: {
+              bills: reportForm.cashDetails.bills.map(bill => ({
+                denomination: bill.denomination,
+                quantity: bill.quantity,
+                total: bill.total
+              })),
+              coins: reportForm.cashDetails.coins.map(coin => ({
+                denomination: coin.denomination,
+                quantity: coin.quantity,
+                total: coin.total
+              })),
+              summary: {
+                billsTotal,
+                coinsTotal,
+                total: billsTotal + coinsTotal
+              }
+            },
+            hasConfirmedHonesty: reportForm.hasConfirmedHonesty,
+            submittedAt: new Date().toISOString()
           }),
           created_at: new Date().toISOString()
         });
@@ -158,24 +216,72 @@ export default function Planning() {
         .update({
           completed: true,
           completed_at: new Date().toISOString(),
+          notes: JSON.stringify({
+            type: 'cash_report',
+            totalAmount: reportForm.totalCash,
+            submittedAt: new Date().toISOString()
+          })
         })
         .eq('id', taskId);
 
       if (taskError) throw taskError;
 
-      // Fermer le modal et réinitialiser le formulaire
+      // Réinitialiser le formulaire et fermer le modal
       setReportModalVisible(false);
       setReportForm({
         totalCash: 0,
         cardPayments: 0,
         tickets: 0,
-        notes: ''
+        notes: '',
+        cashDetails: {
+          bills: [
+            { denomination: 500, quantity: 0, total: 0 },
+            { denomination: 200, quantity: 0, total: 0 },
+            { denomination: 100, quantity: 0, total: 0 },
+            { denomination: 50, quantity: 0, total: 0 },
+            { denomination: 20, quantity: 0, total: 0 },
+            { denomination: 10, quantity: 0, total: 0 },
+            { denomination: 5, quantity: 0, total: 0 }
+          ],
+          coins: [
+            { denomination: 2, quantity: 0, total: 0 },
+            { denomination: 1, quantity: 0, total: 0 },
+            { denomination: 0.5, quantity: 0, total: 0 },
+            { denomination: 0.2, quantity: 0, total: 0 },
+            { denomination: 0.1, quantity: 0, total: 0 },
+            { denomination: 0.05, quantity: 0, total: 0 },
+            { denomination: 0.02, quantity: 0, total: 0 },
+            { denomination: 0.01, quantity: 0, total: 0 }
+          ]
+        },
+        signature: null,
+        hasConfirmedHonesty: false
       });
       setCurrentTaskId(null);
       fetchUserAndTasks();
     } catch (error) {
       console.error('Error submitting cash report:', error);
     }
+  };
+
+  const updateCashDetails = (type: 'bills' | 'coins', index: number, quantity: number) => {
+    setReportForm(prev => {
+      const newDetails = { ...prev.cashDetails };
+      newDetails[type][index].quantity = quantity;
+      newDetails[type][index].total = quantity * newDetails[type][index].denomination;
+
+      // Recalculer le total
+      const newTotal = [
+        ...newDetails.bills,
+        ...newDetails.coins
+      ].reduce((sum, item) => sum + item.total, 0);
+
+      return {
+        ...prev,
+        cashDetails: newDetails,
+        totalCash: newTotal
+      };
+    });
   };
 
   const renderDateNavigation = () => (
@@ -209,7 +315,7 @@ export default function Planning() {
       <View style={[styles.categorySection, { borderLeftColor: CATEGORIES[category].color }]}>
         <Text style={styles.categoryTitle}>{CATEGORIES[category].title}</Text>
         {categoryTasks.map((task) => (
-          <View key={task.id} style={[
+          <View key={`task-${task.id}`} style={[
             styles.taskCard,
             task.completed && styles.completedTask
           ]}>
@@ -247,67 +353,133 @@ export default function Planning() {
       visible={isReportModalVisible}
       onRequestClose={() => setReportModalVisible(false)}
     >
-      <View style={styles.modalContent}>
-        <H1>Rapport de caisse</H1>
+      <ScrollView style={styles.modalScrollView}>
+        <View style={styles.modalContent}>
+          <H1 style={styles.modalTitle}>Rapport de caisse</H1>
 
-        <View>
-          <Text style={styles.inputLabel}>Total Espèces</Text>
-          <Input
-            keyboardType="numeric"
-            value={reportForm.totalCash.toString()}
-            onChangeText={(value: string) => setReportForm(prev => ({
-              ...prev,
-              totalCash: parseFloat(value) || 0
-            }))}
-          />
+          {/* Section Billets */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Billets</Text>
+            {reportForm.cashDetails.bills.map((bill, index) => (
+              <View key={`bill-${bill.denomination}-${index}`} style={styles.cashRow}>
+                <Text style={styles.denominationText}>{bill.denomination}€</Text>
+                <Input
+                  style={styles.quantityInput}
+                  keyboardType="numeric"
+                  value={bill.quantity.toString()}
+                  onChangeText={(value) => updateCashDetails('bills', index, parseInt(value) || 0)}
+                />
+                <Text style={styles.totalText}>{bill.total.toFixed(2)}€</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Section Pièces */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Pièces</Text>
+            {reportForm.cashDetails.coins.map((coin, index) => (
+              <View key={`coin-${coin.denomination}-${index}`} style={styles.cashRow}>
+                <Text style={styles.denominationText}>
+                  {coin.denomination < 1 ? `${(coin.denomination * 100).toFixed(0)}c` : `${coin.denomination}€`}
+                </Text>
+                <Input
+                  style={styles.quantityInput}
+                  keyboardType="numeric"
+                  value={coin.quantity.toString()}
+                  onChangeText={(value) => updateCashDetails('coins', index, parseInt(value) || 0)}
+                />
+                <Text style={styles.totalText}>{coin.total.toFixed(2)}€</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Total et autres moyens de paiement */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Récapitulatif</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Espèces:</Text>
+              <Text style={styles.summaryValue}>{reportForm.totalCash.toFixed(2)}€</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Paiements CB</Text>
+              <Input
+                keyboardType="numeric"
+                value={reportForm.cardPayments.toString()}
+                onChangeText={(value) => setReportForm(prev => ({
+                  ...prev,
+                  cardPayments: parseFloat(value) || 0
+                }))}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Tickets Restaurant</Text>
+              <Input
+                keyboardType="numeric"
+                value={reportForm.tickets.toString()}
+                onChangeText={(value) => setReportForm(prev => ({
+                  ...prev,
+                  tickets: parseFloat(value) || 0
+                }))}
+              />
+            </View>
+          </View>
+
+          {/* Notes et Signature */}
+          <View style={styles.section}>
+            <Text style={styles.inputLabel}>Notes / Observations</Text>
+            <Input
+              multiline
+              numberOfLines={3}
+              value={reportForm.notes}
+              onChangeText={(value) => setReportForm(prev => ({
+                ...prev,
+                notes: value
+              }))}
+            />
+          </View>
+
+          {/* Déclaration sur l'honneur */}
+          <View style={styles.honorSection}>
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setReportForm(prev => ({
+                ...prev,
+                hasConfirmedHonesty: !prev.hasConfirmedHonesty
+              }))}
+            >
+              <View style={[
+                styles.checkbox,
+                reportForm.hasConfirmedHonesty && styles.checkboxChecked
+              ]}>
+                {reportForm.hasConfirmedHonesty && (
+                  <Ionicons name="checkmark" size={16} color="white" />
+                )}
+              </View>
+              <Text style={styles.honorText}>
+                Je déclare sur l'honneur que les informations communiquées sont exactes
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalButtons}>
+            <Button
+              onPress={() => setReportModalVisible(false)}
+              variant="secondary"
+            >
+              <Text style={styles.buttonText}>Annuler</Text>
+            </Button>
+            <Button
+              onPress={() => currentTaskId && handleSubmitCashReport(currentTaskId)}
+              variant="destructive"
+              disabled={!reportForm.hasConfirmedHonesty}
+            >
+              <Text style={styles.buttonText}>Valider</Text>
+            </Button>
+          </View>
         </View>
-
-        <Text style={styles.inputLabel}>Paiements CB</Text>
-        <Input
-          placeholder="Paiements CB"
-          keyboardType="numeric"
-          value={reportForm.cardPayments.toString()}
-          onChangeText={(value: string) => setReportForm(prev => ({
-            ...prev,
-            cardPayments: parseFloat(value) || 0
-          }))}
-        />
-        <Text style={styles.inputLabel}>Tickets Restaurant</Text>
-        <Input
-          keyboardType="numeric"
-          value={reportForm.tickets.toString()}
-          onChangeText={(value: string) => setReportForm(prev => ({
-            ...prev,
-            tickets: parseFloat(value) || 0
-          }))}
-        />
-
-        <Text style={styles.inputLabel}>Notes</Text>
-        <Input
-          multiline
-          numberOfLines={3}
-          value={reportForm.notes}
-          onChangeText={(value: string) => setReportForm(prev => ({
-            ...prev,
-            notes: value
-          }))}
-        />
-
-        <View style={styles.modalButtons}>
-          <Button
-            onPress={() => setReportModalVisible(false)}
-            variant="secondary"
-          >
-            Annuler
-          </Button>
-          <Button
-            onPress={() => currentTaskId && handleSubmitCashReport(currentTaskId)}
-            variant="default"
-          >
-            Valider
-          </Button>
-        </View>
-      </View>
+      </ScrollView>
     </Modal>
   );
 
@@ -320,7 +492,11 @@ export default function Planning() {
         <ActivityIndicator size="large" color="#ffffff" style={styles.loader} />
       ) : (
         <ScrollView style={styles.scrollView}>
-          {Object.keys(CATEGORIES).map((category) => renderTasksByCategory(category as keyof typeof CATEGORIES))}
+          {(Object.keys(CATEGORIES) as Array<keyof typeof CATEGORIES>).map((category) => (
+            <React.Fragment key={`category-${category}`}>
+              {renderTasksByCategory(category)}
+            </React.Fragment>
+          ))}
         </ScrollView>
       )}
       {renderCashReportModal()}
@@ -414,27 +590,121 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  modalScrollView: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
   modalContent: {
-    padding: 20,
     backgroundColor: 'white',
     borderRadius: 12,
-    width: '90%',
-    maxWidth: 500,
+    padding: 40,
+    margin: 20,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
-  modalButtons: {
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#333',
+  },
+  cashRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 16,
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  denominationText: {
+    width: 60,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  quantityInput: {
+    flex: 1,
+    maxWidth: 100,
+  },
+  totalText: {
+    width: 80,
+    textAlign: 'right',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  summaryLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#333',
+  },
+  honorSection: {
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#666',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  honorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#666',
   },
   taskDescription: {
     color: '#888',
     fontSize: 14,
     marginTop: 4,
   },
-  inputLabel: {
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 24,
+
+  },
+  buttonText: {
+    color: 'white',
     fontSize: 16,
-    marginBottom: 8,
-    color: '#333',
+    fontWeight: '500',
   },
 });
