@@ -11,7 +11,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 const CATEGORIES = {
   opening: { title: 'Ouverture', color: '#4CAF50' },
-  closing: { title: 'Fermeture', color: '#F44336' },
   maintenance: { title: 'Maintenance', color: '#2196F3' },
 };
 
@@ -96,43 +95,58 @@ export default function Planning() {
 
   // Add this state for error handling
   const [error, setError] = useState<string | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const fetchUserAndTasks = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserEmail(user.email);
 
-        const { data, error } = await supabase
-          .from('assigned_tasks')
-          .select(`
-            *,
-            template:task_templates(
-              id,
-              name,
-              category,
-              description
-            ),
-            employee:employees(
-              id,
-              email,
-              full_name
-            ),
-            shift:shifts!inner(
-              date,
-              shift_type
-            )
-          `)
-          .eq('shift.date', format(selectedDate, 'yyyy-MM-dd'))
-          .eq('employee.email', user.email); // Ajout du filtre sur l'email de l'employé
-
-        if (error) throw error;
-        setTasks(data || []);
+      if (!user?.email) {
+        console.error('No user email found');
+        return;
       }
+
+      setUserEmail(user.email);
+
+      const { data, error } = await supabase
+        .from('assigned_tasks')
+        .select(`
+          *,
+          template:task_templates(
+            id,
+            name,
+            category,
+            description
+          ),
+          employee:employees(
+            id,
+            email,
+            full_name
+          ),
+          shift:shifts!inner(
+            date,
+            shift_type
+          )
+        `)
+        .eq('shift.date', format(selectedDate, 'yyyy-MM-dd'))
+        .eq('employee.email', user.email); // Filter by current user's email
+
+      if (error) {
+        throw new Error(`Erreur lors de la récupération des tâches: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        setTasks([]);
+        return;
+      }
+
+      // Additional verification to ensure we only get tasks assigned to the current user
+      const userTasks = data.filter(task => task.employee?.email === user.email);
+      setTasks(userTasks);
+
     } catch (error) {
       console.error('Error:', error);
+      setError(error instanceof Error ? error.message : 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
@@ -317,13 +331,6 @@ export default function Planning() {
     });
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setSelectedDate(selectedDate);
-    }
-  };
-
   const renderDateNavigation = () => (
     <View style={styles.dateNavigation}>
       <TouchableOpacity
@@ -333,15 +340,9 @@ export default function Planning() {
         <Ionicons name="chevron-back" size={24} color="white" />
       </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => setShowDatePicker(true)}
-        style={styles.dateButton}
-      >
-        <Ionicons name="calendar-outline" size={20} color="white" style={styles.calendarIcon} />
-        <Text style={styles.dateText}>
-          {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
-        </Text>
-      </TouchableOpacity>
+      <Text style={styles.dateText}>
+        {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
+      </Text>
 
       <TouchableOpacity
         onPress={() => setSelectedDate(addDays(selectedDate, 1))}
@@ -349,15 +350,6 @@ export default function Planning() {
       >
         <Ionicons name="chevron-forward" size={24} color="white" />
       </TouchableOpacity>
-
-      {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-        />
-      )}
     </View>
   );
 
@@ -584,6 +576,11 @@ export default function Planning() {
 
       {loading ? (
         <ActivityIndicator size="large" color="#ffffff" style={styles.loader} />
+      ) : tasks.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="calendar-outline" size={64} color="white" />
+          <Text style={styles.emptyText}>Aucune tâche pour aujourd'hui</Text>
+        </View>
       ) : (
         <ScrollView style={styles.scrollView}>
           {(Object.keys(CATEGORIES) as Array<keyof typeof CATEGORIES>).map((category) => (
@@ -622,16 +619,6 @@ const styles = StyleSheet.create({
   },
   navButton: {
     padding: 8,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  calendarIcon: {
-    marginRight: 8,
   },
   dateText: {
     color: 'white',
@@ -834,5 +821,20 @@ const styles = StyleSheet.create({
     color: '#c62828',
     fontSize: 14,
     textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#2d2d2d',
+    margin: 16,
+    borderRadius: 12,
+    padding: 24,
+  },
+  emptyText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
   },
 });
