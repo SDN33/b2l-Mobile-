@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   noteCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#3d3d3d',
     borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   },
   noteDate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#ffffff',
     fontWeight: '500',
   },
   starIcon: {
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   noteContent: {
     fontSize: 15,
-    color: '#1F2937',
+    color: '#ffffff',
     lineHeight: 22,
   },
   archiveButton: {

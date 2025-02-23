@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/config/supabase';
 import { H1 } from '@/components/ui/typography';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const CATEGORIES = {
   opening: { title: 'Ouverture', color: '#4CAF50' },
   closing: { title: 'Fermeture', color: '#F44336' },
-  maintenance: { title: 'Maintenance', color: '#2196F3' }
+  maintenance: { title: 'Maintenance', color: '#2196F3' },
 };
 
 interface Task {
@@ -17,6 +19,7 @@ interface Task {
   completed: boolean;
   completed_at?: string;
   notes?: string;
+  shift_id: string;
   template: {
     id: string;
     name: string;
@@ -34,11 +37,26 @@ interface Task {
   };
 }
 
+interface CashReportForm {
+  totalCash: number;
+  cardPayments: number;
+  tickets: number;
+  notes: string;
+}
+
 export default function Planning() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null | undefined>(null);
+  const [isReportModalVisible, setReportModalVisible] = useState(false);
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
+  const [reportForm, setReportForm] = useState<CashReportForm>({
+    totalCash: 0,
+    cardPayments: 0,
+    tickets: 0,
+    notes: '',
+  });
 
   const fetchUserAndTasks = useCallback(async () => {
     try {
@@ -84,6 +102,17 @@ export default function Planning() {
   }, [fetchUserAndTasks]);
 
   const handleCompleteTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Si c'est une tâche de comptage de caisse, ouvrir le modal
+    if (task.template.name.toLowerCase().includes('comptage caisse')) {
+      setCurrentTaskId(taskId);
+      setReportModalVisible(true);
+      return;
+    }
+
+    // Sinon, procéder normalement
     try {
       const { error } = await supabase
         .from('assigned_tasks')
@@ -97,6 +126,55 @@ export default function Planning() {
       fetchUserAndTasks();
     } catch (error) {
       console.error('Error completing task:', error);
+    }
+  };
+
+  const handleSubmitCashReport = async (taskId: string) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // Créer le rapport de caisse
+      const { error: cashError } = await supabase
+        .from('cash_reports')
+        .insert({
+          shift_id: task.shift_id,
+          amount_start: reportForm.totalCash,
+          amount_end: reportForm.totalCash,
+          notes: JSON.stringify({
+            totalCash: reportForm.totalCash,
+            cardPayments: reportForm.cardPayments,
+            tickets: reportForm.tickets,
+            notes: reportForm.notes
+          }),
+          created_at: new Date().toISOString()
+        });
+
+      if (cashError) throw cashError;
+
+      // Marquer la tâche comme terminée
+      const { error: taskError } = await supabase
+        .from('assigned_tasks')
+        .update({
+          completed: true,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', taskId);
+
+      if (taskError) throw taskError;
+
+      // Fermer le modal et réinitialiser le formulaire
+      setReportModalVisible(false);
+      setReportForm({
+        totalCash: 0,
+        cardPayments: 0,
+        tickets: 0,
+        notes: ''
+      });
+      setCurrentTaskId(null);
+      fetchUserAndTasks();
+    } catch (error) {
+      console.error('Error submitting cash report:', error);
     }
   };
 
@@ -164,6 +242,75 @@ export default function Planning() {
     );
   };
 
+  const renderCashReportModal = () => (
+    <Modal
+      visible={isReportModalVisible}
+      onRequestClose={() => setReportModalVisible(false)}
+    >
+      <View style={styles.modalContent}>
+        <H1>Rapport de caisse</H1>
+
+        <View>
+          <Text style={styles.inputLabel}>Total Espèces</Text>
+          <Input
+            keyboardType="numeric"
+            value={reportForm.totalCash.toString()}
+            onChangeText={(value: string) => setReportForm(prev => ({
+              ...prev,
+              totalCash: parseFloat(value) || 0
+            }))}
+          />
+        </View>
+
+        <Text style={styles.inputLabel}>Paiements CB</Text>
+        <Input
+          placeholder="Paiements CB"
+          keyboardType="numeric"
+          value={reportForm.cardPayments.toString()}
+          onChangeText={(value: string) => setReportForm(prev => ({
+            ...prev,
+            cardPayments: parseFloat(value) || 0
+          }))}
+        />
+        <Text style={styles.inputLabel}>Tickets Restaurant</Text>
+        <Input
+          keyboardType="numeric"
+          value={reportForm.tickets.toString()}
+          onChangeText={(value: string) => setReportForm(prev => ({
+            ...prev,
+            tickets: parseFloat(value) || 0
+          }))}
+        />
+
+        <Text style={styles.inputLabel}>Notes</Text>
+        <Input
+          multiline
+          numberOfLines={3}
+          value={reportForm.notes}
+          onChangeText={(value: string) => setReportForm(prev => ({
+            ...prev,
+            notes: value
+          }))}
+        />
+
+        <View style={styles.modalButtons}>
+          <Button
+            onPress={() => setReportModalVisible(false)}
+            variant="secondary"
+          >
+            Annuler
+          </Button>
+          <Button
+            onPress={() => currentTaskId && handleSubmitCashReport(currentTaskId)}
+            variant="default"
+          >
+            Valider
+          </Button>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <H1 style={styles.title}>Votre Planning</H1>
@@ -176,6 +323,7 @@ export default function Planning() {
           {Object.keys(CATEGORIES).map((category) => renderTasksByCategory(category as keyof typeof CATEGORIES))}
         </ScrollView>
       )}
+      {renderCashReportModal()}
     </SafeAreaView>
   );
 }
@@ -229,9 +377,9 @@ const styles = StyleSheet.create({
   },
   taskCard: {
     backgroundColor: '#3d3d3d',
-    borderRadius: 8,
-    padding: 16,
     marginBottom: 8,
+    padding: 16,
+    borderRadius: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -266,9 +414,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  modalContent: {
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    width: '90%',
+    maxWidth: 500,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 16,
+  },
   taskDescription: {
     color: '#888',
     fontSize: 14,
     marginTop: 4,
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#333',
   },
 });

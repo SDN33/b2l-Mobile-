@@ -4,13 +4,11 @@ import { LogBox } from 'react-native';
 
 import "../global.css";
 import React from "react";
-import { StyleSheet} from "react-native";
 import { SceneMap } from "react-native-tab-view";
 import { SupabaseProvider } from "@/context/supabase-provider";
 import Notes from "./(app)/(protected)/index";
 import Planning from "./(app)/(protected)/planning";
 import Settings from "./(app)/(protected)/settings";
-import { Slot } from "expo-router";
 import { Stack } from "expo-router";
 
 // Optionally suppress the animation warning if you're only targeting web
