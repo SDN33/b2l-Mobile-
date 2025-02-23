@@ -14,6 +14,12 @@ const CATEGORIES = {
   maintenance: { title: 'Maintenance', color: '#2196F3' },
 };
 
+// Ajouter ces constantes en haut du fichier
+const SHIFT_TYPES = {
+  DAY: 'day',
+  NIGHT: 'night'
+};
+
 interface Task {
   id: string;
   completed: boolean;
@@ -95,6 +101,9 @@ export default function Planning() {
 
   // Add this state for error handling
   const [error, setError] = useState<string | null>(null);
+
+  // Add this state for date picker visibility
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const fetchUserAndTasks = useCallback(async () => {
     try {
@@ -331,6 +340,15 @@ export default function Planning() {
     });
   };
 
+  // Add this function to handle date changes
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+    }
+  };
+
+  // Update the renderDateNavigation function
   const renderDateNavigation = () => (
     <View style={styles.dateNavigation}>
       <TouchableOpacity
@@ -340,9 +358,15 @@ export default function Planning() {
         <Ionicons name="chevron-back" size={24} color="white" />
       </TouchableOpacity>
 
-      <Text style={styles.dateText}>
-        {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
-      </Text>
+      <TouchableOpacity
+        onPress={() => setShowDatePicker(true)}
+        style={styles.dateButton}
+      >
+        <Ionicons name="calendar-outline" size={20} color="white" style={styles.calendarIcon} />
+        <Text style={styles.dateText}>
+          {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
+        </Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => setSelectedDate(addDays(selectedDate, 1))}
@@ -350,9 +374,65 @@ export default function Planning() {
       >
         <Ionicons name="chevron-forward" size={24} color="white" />
       </TouchableOpacity>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
     </View>
   );
 
+  // Ajouter cette fonction utilitaire
+  const isTaskValidatable = (task: Task): { validatable: boolean; message: string } => {
+    const now = new Date();
+    const taskDate = new Date(task.shift.date);
+    const currentHour = now.getHours();
+    const isToday = format(taskDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
+    const isTomorrow = format(taskDate, 'yyyy-MM-dd') === format(addDays(now, 1), 'yyyy-MM-dd');
+    const isYesterday = format(taskDate, 'yyyy-MM-dd') === format(addDays(now, -1), 'yyyy-MM-dd');
+
+    // Pour le service de nuit qui termine le lendemain
+    if (task.shift.shift_type === SHIFT_TYPES.NIGHT) {
+      // Si la tâche est d'hier et qu'on est entre 00h et 04h
+      if (isYesterday && currentHour >= 0 && currentHour < 4) {
+        return { validatable: true, message: '' };
+      }
+      // Si la tâche est d'aujourd'hui et qu'on est après 22h
+      if (isToday && currentHour >= 22) {
+        return { validatable: true, message: '' };
+      }
+    } else {
+      // Pour le service de jour
+      if (isToday) {
+        return { validatable: true, message: '' };
+      }
+    }
+
+    if (isTomorrow) {
+      return {
+        validatable: false,
+        message: "Cette tâche ne sera validable que demain"
+      };
+    }
+
+    if (isYesterday && !(task.shift.shift_type === SHIFT_TYPES.NIGHT && currentHour < 4)) {
+      return {
+        validatable: false,
+        message: "Le délai de validation de cette tâche est dépassé"
+      };
+    }
+
+    return {
+      validatable: false,
+      message: "Cette tâche n'est pas validable à cette date"
+    };
+  };
+
+  // Modifier le rendu des tâches dans renderTasksByCategory
   const renderTasksByCategory = (category: keyof typeof CATEGORIES) => {
     const categoryTasks = tasks.filter(task => task.template.category === category);
 
@@ -361,55 +441,66 @@ export default function Planning() {
     return (
       <View style={[styles.categorySection, { borderLeftColor: CATEGORIES[category].color }]}>
         <Text style={styles.categoryTitle}>{CATEGORIES[category].title}</Text>
-        {categoryTasks.map((task) => (
-          <View key={`task-${task.id}`} style={[
-            styles.taskCard,
-            task.completed && styles.completedTask
-          ]}>
-            <View style={styles.taskContent}>
-              <Text style={styles.taskTitle}>{task.template.name}</Text>
-              <Text style={styles.taskAssignee}>
-                Assigné à: {task.employee?.full_name || 'Non assigné'}
-              </Text>
-              {task.template.description && (
-                <Text style={styles.taskDescription}>{task.template.description}</Text>
-              )}
-              {task.completed && task.completed_at && (
-                <Text style={styles.completedAt}>
-                  Terminé le {format(new Date(task.completed_at), 'HH:mm')}
+        {categoryTasks.map((task) => {
+          const { validatable, message } = isTaskValidatable(task);
+
+          return (
+            <View key={`task-${task.id}`} style={[
+              styles.taskCard,
+              task.completed && styles.completedTask
+            ]}>
+              <View style={styles.taskContent}>
+                <Text style={styles.taskTitle}>{task.template.name}</Text>
+                <Text style={styles.taskAssignee}>
+                  Assigné à: {task.employee?.full_name || 'Non assigné'}
                 </Text>
+                {task.template.description && (
+                  <Text style={styles.taskDescription}>{task.template.description}</Text>
+                )}
+                {task.completed && task.completed_at && (
+                  <Text style={styles.completedAt}>
+                    Terminé le {format(new Date(task.completed_at), 'HH:mm')}
+                  </Text>
+                )}
+                {!validatable && !task.completed && (
+                  <Text style={styles.validationMessage}>{message}</Text>
+                )}
+              </View>
+
+              {!task.completed && (
+                <TouchableOpacity
+                  onPress={() => handleCompleteTask(task.id)}
+                  style={[
+                    styles.completeButton,
+                    !validatable && styles.disabledButton
+                  ]}
+                  disabled={!validatable}
+                >
+                  <View style={styles.completeButtonContent}>
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={24}
+                      color={CATEGORIES[category].color}
+                    />
+                    <Text style={[
+                      styles.completeButtonText,
+                      {
+                        color: task.template.name.toLowerCase().includes('comptage caisse')
+                          ? '#F44336'
+                          : CATEGORIES[category].color
+                      }
+                    ]}>
+                      {task.template.name.toLowerCase().includes('comptage caisse')
+                        ? '⚠️ Saisir rapport'
+                        : 'Valider'
+                      }
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               )}
             </View>
-
-            {!task.completed && (
-              <TouchableOpacity
-                onPress={() => handleCompleteTask(task.id)}
-                style={styles.completeButton}
-              >
-                <View style={styles.completeButtonContent}>
-                  <Ionicons
-                    name="checkmark-circle-outline"
-                    size={24}
-                    color={CATEGORIES[category].color}
-                  />
-                  <Text style={[
-                    styles.completeButtonText,
-                    {
-                      color: task.template.name.toLowerCase().includes('comptage caisse')
-                        ? '#F44336' // Red color for cash count tasks
-                        : CATEGORIES[category].color
-                    }
-                  ]}>
-                    {task.template.name.toLowerCase().includes('comptage caisse')
-                      ? '⚠️ Saisir rapport'
-                      : 'Valider'
-                    }
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
+          );
+        })}
       </View>
     );
   };
@@ -619,6 +710,16 @@ const styles = StyleSheet.create({
   },
   navButton: {
     padding: 8,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  calendarIcon: {
+    marginRight: 8,
   },
   dateText: {
     color: 'white',
@@ -836,5 +937,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginTop: 16,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  validationMessage: {
+    color: '#ef5350',
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });
