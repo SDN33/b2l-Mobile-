@@ -120,34 +120,24 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
 };
 
 export const unstable_settings = {
-  initialRouteName: "sign-in",
+  initialRouteName: "welcome", // Changed from "sign-in" to "welcome"
 };
 
 export default function AppLayout() {
-  const { colorScheme } = useColorScheme();
-
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(protected)" />
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)'
+        }
+      }}
+    >
       <Stack.Screen name="welcome" />
-      <Stack.Screen
-        name="sign-in"
-        options={{
-          presentation: "modal",
-          headerShown: true,
-          headerTitle: "Retour",
-          headerStyle: {
-            backgroundColor:
-              colorScheme === "dark"
-                ? colors.dark.background
-                : colors.light.background,
-          },
-          headerTintColor:
-            colorScheme === "dark"
-              ? colors.dark.foreground
-              : colors.light.foreground,
-        }}
-      />
+      <Stack.Screen name="sign-in" />
+      <Stack.Screen name="sign-up" />
+      <Stack.Screen name="modal" />
+      <Stack.Screen name="(protected)" />
     </Stack>
   );
 }

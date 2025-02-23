@@ -130,14 +130,7 @@ const styles = StyleSheet.create({
 		backgroundColor: '#F9FAFB',
 		borderRadius: 16,
 		padding: 24,
-		shadowColor: '#000',
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.05,
-		shadowRadius: 4,
-		elevation: 3,
+		boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)',
 	},
 	inputGroup: {
 		gap: 16,
@@ -164,14 +157,7 @@ const styles = StyleSheet.create({
 		padding: 16,
 		alignItems: 'center',
 		justifyContent: 'center',
-		shadowColor: '#2563EB',
-		shadowOffset: {
-			width: 0,
-			height: 4,
-		},
-		shadowOpacity: 0.2,
-		shadowRadius: 8,
-		elevation: 4,
+		boxShadow: '0px 4px 8px rgba(37, 99, 235, 0.2)',
 	},
 	buttonText: {
 		color: '#FFFFFF',

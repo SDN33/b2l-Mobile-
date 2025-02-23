@@ -9,20 +9,21 @@ import { Stack } from "expo-router";
 import { useColorScheme } from '@/lib/useColorScheme';
 
 export default function RootLayout() {
-  // Move hooks to the top level
   const { colorScheme } = useColorScheme();
 
-  // Move useEffect inside the component
   useEffect(() => {
     LogBox.ignoreLogs(['Animated: `useNativeDriver`']);
   }, []);
 
-  // Return your layout configuration
   return (
     <SupabaseProvider>
       <Stack
         screenOptions={{
           headerShown: false,
+          contentStyle: {
+            backgroundColor: colorScheme === "dark" ? "#000000" : "#ffffff",
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)' // Changed from shadow props to boxShadow
+          },
         }}
       >
         <Stack.Screen

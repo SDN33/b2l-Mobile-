@@ -7,6 +7,7 @@ import { supabase } from '@/config/supabase';
 import { H1 } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const CATEGORIES = {
   opening: { title: 'Ouverture', color: '#4CAF50' },
@@ -95,6 +96,7 @@ export default function Planning() {
 
   // Add this state for error handling
   const [error, setError] = useState<string | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const fetchUserAndTasks = useCallback(async () => {
     try {
@@ -315,6 +317,13 @@ export default function Planning() {
     });
   };
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+    }
+  };
+
   const renderDateNavigation = () => (
     <View style={styles.dateNavigation}>
       <TouchableOpacity
@@ -324,9 +333,15 @@ export default function Planning() {
         <Ionicons name="chevron-back" size={24} color="white" />
       </TouchableOpacity>
 
-      <Text style={styles.dateText}>
-        {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
-      </Text>
+      <TouchableOpacity
+        onPress={() => setShowDatePicker(true)}
+        style={styles.dateButton}
+      >
+        <Ionicons name="calendar-outline" size={20} color="white" style={styles.calendarIcon} />
+        <Text style={styles.dateText}>
+          {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
+        </Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => setSelectedDate(addDays(selectedDate, 1))}
@@ -334,6 +349,15 @@ export default function Planning() {
       >
         <Ionicons name="chevron-forward" size={24} color="white" />
       </TouchableOpacity>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
     </View>
   );
 
@@ -598,6 +622,16 @@ const styles = StyleSheet.create({
   },
   navButton: {
     padding: 8,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  calendarIcon: {
+    marginRight: 8,
   },
   dateText: {
     color: 'white',

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Animated, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Animated, TouchableWithoutFeedback, Pressable } from 'react-native';
 import { MaterialIcons, AntDesign } from '@expo/vector-icons';
 import { supabase } from '@/config/supabase';
 import { Button } from '@/components/ui/button';
@@ -170,7 +170,7 @@ const NotesComponent = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableWithoutFeedback onPress={handleOutsideClick}>
+      <Pressable onPress={handleOutsideClick}>
         <View style={styles.container}>
           <View style={styles.header}>
             <H1 style={styles.title}>Notes</H1>
@@ -251,7 +251,7 @@ const NotesComponent = () => {
             </View>
           </View>
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
     </SafeAreaView>
   );
 };
@@ -292,11 +292,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3d3d3d',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     marginBottom: 12,
@@ -336,11 +332,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     padding: 16,
     backgroundColor: '#F9FAFB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    boxShadow: '0px -2px 4px rgba(0, 0, 0, 0.05)',
   },
   textarea: {
     fontSize: 16,
@@ -372,11 +364,7 @@ const styles = StyleSheet.create({
     padding: 8,
     maxHeight: 200,
     width: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    boxShadow: '0px -4px 8px rgba(0, 0, 0, 0.1)',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
