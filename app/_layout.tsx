@@ -1,11 +1,11 @@
-import "../global.css";
-import React, { useState } from "react";
-import { View, StyleSheet, useWindowDimensions, Text } from "react-native";
-import { TabView, SceneMap, TabBar } from "react-native-tab-view";
-import { Ionicons } from "@expo/vector-icons";
+import 'react-native-gesture-handler';
+import { useEffect } from 'react';
+import { LogBox } from 'react-native';
 
-import { colors } from "@/constants/colors";
-import { useColorScheme } from "@/lib/useColorScheme";
+import "../global.css";
+import React from "react";
+import { StyleSheet} from "react-native";
+import { SceneMap } from "react-native-tab-view";
 import { SupabaseProvider } from "@/context/supabase-provider";
 import Notes from "./(app)/(protected)/index";
 import Planning from "./(app)/(protected)/planning";
@@ -13,8 +13,13 @@ import Settings from "./(app)/(protected)/settings";
 import { Slot } from "expo-router";
 import { Stack } from "expo-router";
 
+// Optionally suppress the animation warning if you're only targeting web
+useEffect(() => {
+  LogBox.ignoreLogs(['Animated: `useNativeDriver`']);
+}, []);
+
 const renderScene = SceneMap({
-  notes: Notes,
+  index: Notes,
   planning: Planning,
   settings: Settings,
 });
@@ -28,9 +33,3 @@ export default function RootLayout() {
     </SupabaseProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  scene: {
-    flex: 1,
-  },
-});
