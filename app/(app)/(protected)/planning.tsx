@@ -93,6 +93,9 @@ export default function Planning() {
     hasConfirmedHonesty: false
   });
 
+  // Add this state for error handling
+  const [error, setError] = useState<string | null>(null);
+
   const fetchUserAndTasks = useCallback(async () => {
     try {
       setLoading(true);
@@ -120,7 +123,8 @@ export default function Planning() {
               shift_type
             )
           `)
-          .eq('shift.date', format(selectedDate, 'yyyy-MM-dd'));
+          .eq('shift.date', format(selectedDate, 'yyyy-MM-dd'))
+          .eq('employee.email', user.email); // Ajout du filtre sur l'email de l'employé
 
         if (error) throw error;
         setTasks(data || []);
@@ -164,20 +168,39 @@ export default function Planning() {
     }
   };
 
+  // Modify the handleSubmitCashReport function
   const handleSubmitCashReport = async (taskId: string) => {
     try {
+      setError(null); // Reset any previous errors
       const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
+      if (!task) {
+        throw new Error('Tâche non trouvée');
+      }
 
-      // Calcul des totaux par catégorie
+      // Check internet connection
+      const networkState = await fetch('https://www.google.com', {
+        mode: 'no-cors',
+        cache: 'no-cache'
+      }).catch(() => null);
+
+      if (!networkState) {
+        throw new Error('Pas de connexion internet. Veuillez réessayer.');
+      }
+
+      // Rest of your existing code...
+      const reportType = task.template.category === 'opening' ? 'opening' : 'closing';
       const billsTotal = reportForm.cashDetails.bills.reduce((sum, bill) => sum + bill.total, 0);
       const coinsTotal = reportForm.cashDetails.coins.reduce((sum, coin) => sum + coin.total, 0);
+
+      // Add loading state feedback
+      setLoading(true);
 
       // Créer le rapport de caisse
       const { error: cashError } = await supabase
         .from('cash_reports')
         .insert({
           shift_id: task.shift_id,
+          type: reportType, // Add the report type
           amount_start: reportForm.totalCash,
           amount_end: reportForm.totalCash,
           notes: JSON.stringify({
@@ -203,14 +226,17 @@ export default function Planning() {
               }
             },
             hasConfirmedHonesty: reportForm.hasConfirmedHonesty,
-            submittedAt: new Date().toISOString()
+            submittedAt: new Date().toISOString(),
+            reportType // Include type in notes for reference
           }),
           created_at: new Date().toISOString()
         });
 
-      if (cashError) throw cashError;
+      if (cashError) {
+        throw new Error(`Erreur lors de la création du rapport: ${cashError.message}`);
+      }
 
-      // Marquer la tâche comme terminée
+      // Update the task completion
       const { error: taskError } = await supabase
         .from('assigned_tasks')
         .update({
@@ -218,6 +244,7 @@ export default function Planning() {
           completed_at: new Date().toISOString(),
           notes: JSON.stringify({
             type: 'cash_report',
+            reportType, // Include type in task notes
             totalAmount: reportForm.totalCash,
             submittedAt: new Date().toISOString()
           })
@@ -259,8 +286,12 @@ export default function Planning() {
       });
       setCurrentTaskId(null);
       fetchUserAndTasks();
+
     } catch (error) {
       console.error('Error submitting cash report:', error);
+      setError(error instanceof Error ? error.message : 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -322,7 +353,7 @@ export default function Planning() {
             <View style={styles.taskContent}>
               <Text style={styles.taskTitle}>{task.template.name}</Text>
               <Text style={styles.taskAssignee}>
-                Assigné à: {task.employee.full_name}
+                Assigné à: {task.employee?.full_name || 'Non assigné'}
               </Text>
               {task.template.description && (
                 <Text style={styles.taskDescription}>{task.template.description}</Text>
@@ -334,12 +365,31 @@ export default function Planning() {
               )}
             </View>
 
-            {task.employee.email === userEmail && !task.completed && (
+            {!task.completed && (
               <TouchableOpacity
                 onPress={() => handleCompleteTask(task.id)}
                 style={styles.completeButton}
               >
-                <Ionicons name="checkmark-circle-outline" size={24} color={CATEGORIES[category].color} />
+                <View style={styles.completeButtonContent}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={24}
+                    color={CATEGORIES[category].color}
+                  />
+                  <Text style={[
+                    styles.completeButtonText,
+                    {
+                      color: task.template.name.toLowerCase().includes('comptage caisse')
+                        ? '#F44336' // Red color for cash count tasks
+                        : CATEGORIES[category].color
+                    }
+                  ]}>
+                    {task.template.name.toLowerCase().includes('comptage caisse')
+                      ? '⚠️ Saisir rapport'
+                      : 'Valider'
+                    }
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>
@@ -348,6 +398,7 @@ export default function Planning() {
     );
   };
 
+  // Modify the modal to show errors
   const renderCashReportModal = () => (
     <Modal
       visible={isReportModalVisible}
@@ -355,7 +406,19 @@ export default function Planning() {
     >
       <ScrollView style={styles.modalScrollView}>
         <View style={styles.modalContent}>
-          <H1 style={styles.modalTitle}>Rapport de caisse</H1>
+          <H1 style={styles.modalTitle}>
+            {currentTaskId && tasks.find(t => t.id === currentTaskId)?.template.category === 'opening'
+              ? "Rapport d'ouverture"
+              : "Rapport de fermeture"
+            }
+          </H1>
+
+          {/* Add error message display */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
           {/* Section Billets */}
           <View style={styles.section}>
@@ -465,7 +528,10 @@ export default function Planning() {
 
           <View style={styles.modalButtons}>
             <Button
-              onPress={() => setReportModalVisible(false)}
+              onPress={() => {
+                setError(null);
+                setReportModalVisible(false);
+              }}
               variant="secondary"
             >
               <Text style={styles.buttonText}>Annuler</Text>
@@ -473,9 +539,13 @@ export default function Planning() {
             <Button
               onPress={() => currentTaskId && handleSubmitCashReport(currentTaskId)}
               variant="destructive"
-              disabled={!reportForm.hasConfirmedHonesty}
+              disabled={!reportForm.hasConfirmedHonesty || loading}
             >
-              <Text style={styles.buttonText}>Valider</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.buttonText}>Valider</Text>
+              )}
             </Button>
           </View>
         </View>
@@ -584,6 +654,16 @@ const styles = StyleSheet.create({
   },
   completeButton: {
     padding: 8,
+    minWidth: 100,
+  },
+  completeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  completeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   loader: {
     flex: 1,
@@ -706,5 +786,19 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
+  },
+  // Add these new styles
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ef5350',
+  },
+  errorText: {
+    color: '#c62828',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

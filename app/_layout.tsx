@@ -4,29 +4,33 @@ import { LogBox } from 'react-native';
 
 import "../global.css";
 import React from "react";
-import { SceneMap } from "react-native-tab-view";
 import { SupabaseProvider } from "@/context/supabase-provider";
-import Notes from "./(app)/(protected)/index";
-import Planning from "./(app)/(protected)/planning";
-import Settings from "./(app)/(protected)/settings";
 import { Stack } from "expo-router";
-
-// Optionally suppress the animation warning if you're only targeting web
-useEffect(() => {
-  LogBox.ignoreLogs(['Animated: `useNativeDriver`']);
-}, []);
-
-const renderScene = SceneMap({
-  index: Notes,
-  planning: Planning,
-  settings: Settings,
-});
+import { useColorScheme } from '@/lib/useColorScheme';
 
 export default function RootLayout() {
+  // Move hooks to the top level
+  const { colorScheme } = useColorScheme();
+
+  // Move useEffect inside the component
+  useEffect(() => {
+    LogBox.ignoreLogs(['Animated: `useNativeDriver`']);
+  }, []);
+
+  // Return your layout configuration
   return (
     <SupabaseProvider>
-      <Stack>
-        <Stack.Screen name="(app)" options={{ headerShown: false }} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen
+          name="(app)"
+          options={{
+            headerShown: false
+          }}
+        />
       </Stack>
     </SupabaseProvider>
   );
