@@ -1,50 +1,58 @@
 import { Tabs } from "expo-router";
-import React from "react";
-import { Ionicons } from "@expo/vector-icons";
 import { Platform, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/colors";
 import { useColorScheme } from "@/lib/useColorScheme";
 
 export default function ProtectedLayout() {
-    const { colorScheme } = useColorScheme();
+  const { colorScheme } = useColorScheme();
 
-    return (
-        <View style={{ flex: 1, pointerEvents: 'auto' }}>
-            <Tabs
-                screenOptions={({ route }) => ({
-                    headerShown: false,
-                    tabBarStyle: {
-                        backgroundColor: colorScheme === "dark"
-                            ? colors.dark.background
-                            : colors.light.background,
-                    },
-                    tabBarActiveTintColor: colorScheme === "dark"
-                        ? colors.dark.foreground
-                        : colors.light.foreground,
-                    tabBarIcon: ({ color, size }) => {
-                        let iconName: keyof typeof Ionicons.glyphMap = "home";
-
-                        if (route.name === "index") {
-                            iconName = "document-text-outline";
-                        } else if (route.name === "planning") {
-                            iconName = "calendar-outline";
-                        } else if (route.name === "settings") {
-                            iconName = "settings-outline";
-                        }
-
-                        return <Ionicons name={iconName} size={size} color={color} />;
-                    },
-                    tabBarAnimation: Platform.select({
-                        ios: 'default',
-                        android: 'none',
-                        web: 'none'
-                    })
-                })}
-            >
-                <Tabs.Screen name="index" options={{ title: "Notes" }} />
-                <Tabs.Screen name="planning" options={{ title: "Planning" }} />
-                <Tabs.Screen name="settings" options={{ title: "Réglages" }} />
-            </Tabs>
-        </View>
-    );
+  return (
+    <View style={{ flex: 1, pointerEvents: 'box-none' }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: colorScheme === "dark"
+              ? colors.dark.background
+              : colors.light.background,
+            pointerEvents: 'auto'
+          },
+          tabBarActiveTintColor: colorScheme === "dark"
+            ? colors.dark.foreground
+            : colors.light.foreground,
+          // Disable animations on web platform
+          animation: Platform.OS === 'web' ? 'none' : 'fade',
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Notes",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="document-text-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="planning"
+          options={{
+            title: "Planning",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="calendar-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: "Réglages",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="settings-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
+    </View>
+  );
 }
