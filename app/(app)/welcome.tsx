@@ -16,7 +16,8 @@ export default function WelcomeScreen() {
 			<View className="flex flex-1 items-center justify-center gap-y-4 web:m-4">
 				<Image
 					source={require("@/assets/icon.png")}
-					className="size-48 rounded-xl"
+					style={{ width: 192, height: 192 }}
+					className="rounded-xl"
 				/>
 				<H1 className="text-center text-red-600">The Place To Be  STAFF</H1>
 				<Muted className="text-center text-white">

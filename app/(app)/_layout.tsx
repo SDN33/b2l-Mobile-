@@ -40,7 +40,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   const segments = useSegments();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [initialized, setInitialized] = useState<boolean>(false);
+  const [initialized, setInitialized] = useState<boolean>(true);
 
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({
@@ -73,7 +73,6 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session ? session.user : null);
-      setInitialized(true);
     });
 
     supabase.auth.onAuthStateChange((_event, session) => {
@@ -83,8 +82,6 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   }, []);
 
   useEffect(() => {
-    if (!initialized) return;
-
     const inProtectedGroup = segments[1] === "(protected)";
 
     if (session && !inProtectedGroup) {
@@ -93,10 +90,6 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
       router.replace("/(app)/welcome");
     }
 
-    /* HACK: Something must be rendered when determining the initial auth state...
-    instead of creating a loading screen, we use the SplashScreen and hide it after
-    a small delay (500 ms)
-    */
 
     setTimeout(() => {
       SplashScreen.hideAsync();
