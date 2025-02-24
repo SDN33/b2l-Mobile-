@@ -22,6 +22,7 @@
         "backgroundColor": "#ffffff",
         "dark": {
           "backgroundColor": "#000000",
+
           "resizeMode": "cover",
           "image": "./assets/icon.png"
         }

@@ -1,7 +1,6 @@
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter, useSegments, SplashScreen } from "expo-router";
 import { createContext, useContext, useEffect, useState } from "react";
-
 import { supabase } from "@/config/supabase";
 
 SplashScreen.preventAutoHideAsync();
@@ -71,10 +70,12 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
       setInitialized(true);
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session ? session.user : null);
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -87,11 +88,6 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
     } else if (!session) {
       router.replace("/(app)/welcome");
     }
-
-    /* HACK: Something must be rendered when determining the initial auth state...
-    instead of creating a loading screen, we use the SplashScreen and hide it after
-    a small delay (500 ms)
-    */
 
     setTimeout(() => {
       SplashScreen.hideAsync();

@@ -1,38 +1,47 @@
-import 'react-native-gesture-handler';
-import { useEffect } from 'react';
-import { LogBox } from 'react-native';
-
 import "../global.css";
-import React from "react";
+import { Slot } from "expo-router";
 import { SupabaseProvider } from "@/context/supabase-provider";
-import { Stack } from "expo-router";
-import { useColorScheme } from '@/lib/useColorScheme';
+import { useEffect, useState } from "react";
+import * as SplashScreen from "expo-splash-screen";
 
-export default function RootLayout() {
-  const { colorScheme } = useColorScheme();
+SplashScreen.preventAutoHideAsync();
+
+export default function AppLayout() {
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    LogBox.ignoreLogs(['Animated: `useNativeDriver`']);
+    async function loadResources() {
+      try {
+        // Vos chargements initiaux ici
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        requestAnimationFrame(() => {
+          setIsReady(true);
+        });
+      } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+      }
+    }
+
+    loadResources();
   }, []);
+
+  useEffect(() => {
+    if (isReady) {
+      // Cache le splash screen seulement quand isReady devient true
+      requestAnimationFrame(() => {
+        SplashScreen.hideAsync().catch(console.error);
+      });
+    }
+  }, [isReady]);
+
+  if (!isReady) {
+    return null;
+  }
 
   return (
     <SupabaseProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            backgroundColor: colorScheme === "dark" ? "#000000" : "#ffffff",
-            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)' // Changed from shadow props to boxShadow
-          },
-        }}
-      >
-        <Stack.Screen
-          name="(app)"
-          options={{
-            headerShown: false
-          }}
-        />
-      </Stack>
+      <Slot />
     </SupabaseProvider>
   );
 }
